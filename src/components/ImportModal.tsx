@@ -108,10 +108,11 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
     <div className="anim-fade fixed inset-0 z-[60] overflow-y-auto bg-pine/60" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
         <div
-          className="anim-pop flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-xl border-2 border-pine bg-card shadow-[8px_8px_0_0_rgba(13,33,26,0.35)]"
+          className="fixed anim-pop flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-xl border-2 border-pine bg-card shadow-[8px_8px_0_0_rgba(13,33,26,0.35)]"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
+          style={{ top: '5%'}}
         >
           <div className="flex items-center justify-between border-b border-line px-6 py-4">
             <div className="flex items-center gap-3">
