@@ -112,7 +112,7 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          style={{ top: '5%'}}
+          style={{ top: '0%'}}
         >
           <div className="flex items-center justify-between border-b border-line px-6 py-4">
             <div className="flex items-center gap-3">
