@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'nodejs',
+};
+
 const USERNAME = process.env.BASIC_AUTH_USERNAME;
 const PASSWORD = process.env.BASIC_AUTH_PASSWORD;
 
@@ -8,26 +12,29 @@ export default function middleware(request: Request) {
     return unauthorized();
   }
 
-  const encodedCredentials = authorization.slice("Basic ".length);
+  const encoded = authorization.slice("Basic ".length);
 
-  let decodedCredentials: string;
+  let decoded: string;
 
   try {
-    decodedCredentials = atob(encodedCredentials);
+    decoded = atob(encoded);
   } catch {
     return unauthorized();
   }
 
-  const separatorIndex = decodedCredentials.indexOf(":");
+  const separator = decoded.indexOf(":");
 
-  if (separatorIndex === -1) {
+  if (separator === -1) {
     return unauthorized();
   }
 
-  const username = decodedCredentials.slice(0, separatorIndex);
-  const password = decodedCredentials.slice(separatorIndex + 1);
+  const username = decoded.slice(0, separator);
+  const password = decoded.slice(separator + 1);
 
-  if (username !== USERNAME || password !== PASSWORD) {
+  if (
+    username !== USERNAME ||
+    password !== PASSWORD
+  ) {
     return unauthorized();
   }
 
@@ -35,7 +42,7 @@ export default function middleware(request: Request) {
 }
 
 function unauthorized() {
-  return new Response("Authentication required.", {
+  return new Response("Authentication required", {
     status: 401,
     headers: {
       "WWW-Authenticate": 'Basic realm="Private Website"',
