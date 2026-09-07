@@ -37,7 +37,8 @@ export default function middleware(request: Request) {
   console.log('username', username );
   console.log('password', password );
 
-
+  console.log('variable name', USERNAME);
+  console.log('variable password', PASSWORD);
   if (
     username !== USERNAME ||
     password !== PASSWORD
