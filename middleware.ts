@@ -9,7 +9,6 @@ export default function middleware(request: Request) {
   const authorization = request.headers.get("authorization");
 
   if (!authorization?.startsWith("Basic ")) {
-    console.log('fialed at 12');
     return unauthorized();
   }
 
@@ -19,31 +18,22 @@ export default function middleware(request: Request) {
 
   try {
     decoded = atob(encoded);
-    console.log('decoded', decoded );
   } catch {
-    console.log('not decoded');
     return unauthorized();
   }
 
   const separator = decoded.indexOf(":");
-    console.log('separator', separator );
   if (separator === -1) {
-    console.log('separator error 31');
     return unauthorized();
   }
 
   const username = decoded.slice(0, separator);
   const password = decoded.slice(separator + 1);
-  console.log('username', username );
-  console.log('password', password );
 
-  console.log('variable name', USERNAME);
-  console.log('variable password', PASSWORD);
   if (
     username !== USERNAME ||
     password !== PASSWORD
   ) {
-     console.log('actual failed');
     return unauthorized();
   }
 
