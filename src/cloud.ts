@@ -235,13 +235,38 @@ export async function syncAll(
   local: SyncInput,
   dirty: DirtyFlags
 ): Promise<SyncResult> {
-  const [txRes, catRes, setRes, inboxRes] = await Promise.all([
-    client.from("transactions").select("*").eq("user_id", userId),
+  // Fetch all transactions with pagination to handle >1000 records
+  const fetchAllTransactions = async (): Promise<TxRow[]> => {
+    const batchSize = 1000;
+    let allTx: TxRow[] = [];
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await client
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .range(offset, offset + batchSize - 1)
+        .order("updated_at", { ascending: false });
+
+      if (error) throw new Error(`transactions: ${error.message}`);
+      if (!data || data.length === 0) break;
+
+      allTx = allTx.concat(data as TxRow[]);
+
+      if (data.length < batchSize) break; // Last batch
+      offset += batchSize;
+    }
+
+    return allTx;
+  };
+  const [allTx, catRes, setRes, inboxRes] = await Promise.all([
+    fetchAllTransactions(),
     client.from("categories").select("*").eq("user_id", userId),
     client.from("settings").select("*").eq("user_id", userId).maybeSingle(),
     client.from("sheet_inbox").select("*").order("id", { ascending: true }),
   ]);
-  if (txRes.error) throw new Error(`transactions: ${txRes.error.message}`);
+  const txRes = { data: allTx, error: null };
   if (catRes.error) throw new Error(`categories: ${catRes.error.message}`);
   if (setRes.error) throw new Error(`settings: ${setRes.error.message}`);
 
@@ -302,15 +327,15 @@ export async function syncAll(
   const inboxRows = inboxRes.error
     ? []
     : ((inboxRes.data ?? []) as {
-        id: number;
-        date: string | null;
-        kind: string | null;
-        category: string | null;
-        note: string | null;
-        amount: number | null;
-        payment: string | null;
-        source_ref: string | null;
-      }[]);
+      id: number;
+      date: string | null;
+      kind: string | null;
+      category: string | null;
+      note: string | null;
+      amount: number | null;
+      payment: string | null;
+      source_ref: string | null;
+    }[]);
 
   if (inboxRows.length > 0) {
     const now = Date.now();
@@ -334,7 +359,7 @@ export async function syncAll(
     for (const rows of inboxBySource.values()) {
       rows.sort((a, b) => b.id - a.id);
       const latest = rows[0];
-      
+
       for (const row of rows) {
         allInboxIds.push(row.id);
       }
@@ -398,7 +423,7 @@ export async function syncAll(
       }
       ingested++;
     }
-    
+
     if (allInboxIds.length > 0) {
       await client.from("sheet_inbox").delete().in("id", allInboxIds);
     }
