@@ -31,7 +31,7 @@ function StatTile({
 }) {
   return (
     <Reveal delay={delay}>
-      <div className={`${CARD} h-full p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--color-line)]`}>
+      <div className={`card-hover shadow-soft ${CARD} h-full p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--color-line)]`}>
         <div className="flex items-center justify-between">
           <span className="stamp text-ink-soft">{label}</span>
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-mint-dim text-moss-deep">

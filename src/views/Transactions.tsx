@@ -24,11 +24,22 @@ export function Transactions({
   const [typeF, setTypeF] = useState<TypeFilter>("all");
   const [catF, setCatF] = useState("all");
   const [monthF, setMonthF] = useState("all");
+  const [yearF, setYearF] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [toDelete, setToDelete] = useState<Transaction | null>(null);
 
   const monthOptions = useMemo(
     () =>
       Array.from(new Set(transactions.map((t) => t.date.slice(0, 7))))
+        .sort()
+        .reverse(),
+    [transactions]
+  );
+
+  const yearOptions = useMemo(
+    () =>
+      Array.from(new Set(transactions.map((t) => t.date.slice(0, 4))))
         .sort()
         .reverse(),
     [transactions]
@@ -40,6 +51,9 @@ export function Transactions({
       .filter((t) => typeF === "all" || t.type === typeF)
       .filter((t) => catF === "all" || t.categoryId === catF)
       .filter((t) => monthF === "all" || t.date.startsWith(monthF))
+      .filter((t) => yearF === "all" || t.date.startsWith(yearF))
+      .filter((t) => !dateFrom || t.date >= dateFrom)
+      .filter((t) => !dateTo || t.date <= dateTo)
       .filter((t) => {
         if (!ql) return true;
         const cat = categories.find((c) => c.id === t.categoryId);
@@ -49,7 +63,7 @@ export function Transactions({
         );
       })
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [transactions, categories, q, typeF, catF, monthF]);
+  }, [transactions, categories, q, typeF, catF, monthF, yearF, dateFrom, dateTo]);
 
   const groups = useMemo(() => {
     const m = new Map<string, Transaction[]>();
@@ -69,12 +83,15 @@ export function Transactions({
     [filtered]
   );
 
-  const hasFilters = q !== "" || typeF !== "all" || catF !== "all" || monthF !== "all";
+  const hasFilters = q !== "" || typeF !== "all" || catF !== "all" || monthF !== "all" || yearF !== "all" || dateFrom !== "" || dateTo !== "";
   const clearFilters = () => {
     setQ("");
     setTypeF("all");
     setCatF("all");
     setMonthF("all");
+    setYearF("all");
+    setDateFrom("");
+    setDateTo("");
   };
 
   const catOf = (id: string) => categories.find((c) => c.id === id);
@@ -117,51 +134,81 @@ export function Transactions({
 
       {/* filters */}
       <Reveal>
-        <div className={`${CARD} flex flex-wrap items-center gap-2.5 p-3.5`}>
-          <div className="relative min-w-[200px] flex-1">
-            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint">
-              <Icon name="search" size={16} />
-            </span>
-            <input
-              className="field pl-10"
-              placeholder="Search notes or categories…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
+        <div className={`${CARD} p-4`}>
+          {/* Row 1: Search + Type toggle */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex-1 min-w-[280px]">
+              <input
+                className="field"
+                placeholder="Search notes or categories…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            <Segmented<TypeFilter>
+              value={typeF}
+              onChange={setTypeF}
+              options={[
+                { value: "all", label: "All" },
+                { value: "income", label: "In", icon: "upRight" },
+                { value: "expense", label: "Out", icon: "downRight" },
+              ]}
             />
           </div>
-          <Segmented<TypeFilter>
-            value={typeF}
-            onChange={setTypeF}
-            options={[
-              { value: "all", label: "All" },
-              { value: "income", label: "In", icon: "upRight" },
-              { value: "expense", label: "Out", icon: "downRight" },
-            ]}
-          />
-          <select className="field w-auto" value={catF} onChange={(e) => setCatF(e.target.value)}>
-            <option value="all">All categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select className="field w-auto" value={monthF} onChange={(e) => setMonthF(e.target.value)}>
-            <option value="all">All time</option>
-            {monthOptions.map((k) => (
-              <option key={k} value={k}>
-                {monthLabel(k)}
-              </option>
-            ))}
-          </select>
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-coral-deep transition-colors hover:bg-coral-soft cursor-pointer"
-            >
-              <Icon name="x" size={13} strokeWidth={2.6} /> Clear
-            </button>
-          )}
+
+          {/* Row 2: Category + Month + Year + Date range */}
+          <div className="mt-3 flex flex-nowrap items-center gap-2">
+            <select className="flex-1 border border-line rounded-lg bg-card text-sm px-3 py-2 text-ink min-w-0" value={catF} onChange={(e) => setCatF(e.target.value)}>
+              <option value="all">All categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select className="flex-1 border border-line rounded-lg bg-card text-sm px-3 py-2 text-ink min-w-0" value={monthF} onChange={(e) => setMonthF(e.target.value)}>
+              <option value="all">All months</option>
+              {monthOptions.map((k) => (
+                <option key={k} value={k}>
+                  {monthLabel(k)}
+                </option>
+              ))}
+            </select>
+            <select className="flex-1 border border-line rounded-lg bg-card text-sm px-3 py-2 text-ink min-w-0" value={yearF} onChange={(e) => setYearF(e.target.value)}>
+              <option value="all">All years</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-paper px-3 py-2">
+              <Icon name="calendar" size={14} className="text-ink-faint" />
+              <input
+                type="date"
+                className="bg-transparent text-sm text-ink outline-none"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                placeholder="From"
+              />
+              <span className="text-ink-faint text-sm">→</span>
+              <input
+                type="date"
+                className="bg-transparent text-sm text-ink outline-none"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                placeholder="To"
+              />
+            </div>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-coral-deep transition-colors hover:bg-coral-soft cursor-pointer"
+              >
+                <Icon name="x" size={13} strokeWidth={2.6} /> Clear
+              </button>
+            )}
+          </div>
         </div>
       </Reveal>
 

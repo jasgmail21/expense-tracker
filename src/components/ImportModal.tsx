@@ -21,7 +21,6 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [allExpense, setAllExpense] = useState(true);
   const [noHeader, setNoHeader] = useState(false);
   const [mappingOverride, setMappingOverride] = useState<Mapping | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -38,8 +37,8 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   const parsed = useMemo(
-    () => (raw ? buildParsed(raw, allExpense, noHeader, categories) : null),
-    [raw, allExpense, noHeader, categories]
+    () => (raw ? buildParsed(raw, true, noHeader, categories) : null),
+    [raw, noHeader, categories]
   );
   const effParsed = parsed && mappingOverride ? { ...parsed, mapping: mappingOverride } : parsed;
 
@@ -144,15 +143,6 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
                 <label className="flex items-center gap-2 text-[13px] font-medium text-ink-soft cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={allExpense}
-                    onChange={(e) => setAllExpense(e.target.checked)}
-                    className="h-4 w-4 accent-[#2f7e58]"
-                  />
-                  No type column → treat positive rows as expenses
-                </label>
-                <label className="flex items-center gap-2 text-[13px] font-medium text-ink-soft cursor-pointer">
-                  <input
-                    type="checkbox"
                     checked={noHeader}
                     onChange={(e) => { setNoHeader(e.target.checked); setMappingOverride(null); }}
                     className="h-4 w-4 accent-[#2f7e58]"
@@ -210,12 +200,12 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
                 <div className="rounded-xl border border-line bg-paper/70 p-4 text-[13px] leading-5 text-ink-soft">
                   <p className="mb-1 font-bold text-ink">Make the sheet readable:</p>
                   <p>
-                    <b>Share → “Anyone with the link”</b> (Viewer) — or <b>File → Share → Publish to web → CSV</b>{" "}
+                    <b>Share → "Anyone with the link"</b> (Viewer) — or <b>File → Share → Publish to web → CSV</b>{" "}
                     and paste that published link.
                   </p>
                   <p className="mt-2 border-t border-dashed border-line pt-2">
                     Want it automatic? Set up <b>live sheet sync</b> in the Cloud sync dialog — then every sync
-                    pulls your chosen month’s tab without opening this window.
+                    pulls your chosen month's tab without opening this window.
                   </p>
                 </div>
               </div>
@@ -264,60 +254,6 @@ export function ImportModal({ onClose }: { onClose: () => void }) {
                   <button onClick={() => { setRaw(null); setMappingOverride(null); }} className="ml-auto text-[12px] font-bold text-ink-soft underline underline-offset-4 hover:text-ink cursor-pointer">
                     Start over
                   </button>
-                </div>
-
-                {/* -------- column mapping -------- */}
-                <div className="rounded-xl border-2 border-pine bg-paper/60 p-4">
-                  <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                    <h3 className="font-display text-[15px] font-bold text-ink">Column mapping</h3>
-                    <span className="num text-[12px] font-semibold text-moss-deep">
-                      {effParsed.transactions.length}/{effParsed.totalRows} rows parse cleanly — changes apply instantly
-                    </span>
-                  </div>
-
-                  {effParsed.sample && (
-                    <div className="mb-4 overflow-x-auto rounded-lg border border-dashed border-line bg-card px-3 py-2">
-                      <p className="stamp mb-1.5 text-ink-faint">First raw row — match the dropdowns to these values</p>
-                      <div className="flex gap-2">
-                        {effParsed.headers.map((h, i) => (
-                          <span key={i} className="shrink-0 rounded-md bg-line-soft px-2 py-1 text-[11.5px]">
-                            <b className="text-ink">{h}:</b>{" "}
-                            <span className="num text-ink-soft">{(effParsed.sample?.[i] ?? "").trim() || "·empty·"}</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                    {(["date", "amount", "type", "category", "note", "payment"] as const).map((k) => (
-                      <div key={k}>
-                        <label className="stamp mb-1 block text-ink-soft">
-                          {k === "type" ? "type (in/out)" : k === "payment" ? "paid via" : k}
-                          {k === "date" || k === "amount" ? " *" : ""}
-                        </label>
-                        <select
-                          className="field px-2 py-2 text-[13px]"
-                          value={effParsed.mapping[k]}
-                          onChange={(e) => setMap(k, e.target.value)}
-                        >
-                          <option value={-1}>— none —</option>
-                          {effParsed.headers.map((h, i) => (
-                            <option key={i} value={i}>
-                              {h || `Column ${i + 1}`}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="mt-3 text-[12px] leading-5 text-ink-faint">
-                    <b className="text-ink-soft">date</b> and <b className="text-ink-soft">amount</b> are required —
-                    every format is auto-converted (05/03/2021, 5 Mar 2021, 1-Sep-2026, ₹1,234.56, 1.234,56 …).
-                    Rows without a category land in <b className="text-ink-soft">Uncategorized</b>; rows with
-                    unparseable dates/amounts are skipped and counted above.
-                  </p>
                 </div>
 
                 <div className="overflow-hidden rounded-xl border border-line">

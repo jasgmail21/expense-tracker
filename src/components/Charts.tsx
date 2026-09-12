@@ -5,6 +5,7 @@ import { Dot, useMounted } from "./ui";
 /* ================= Donut ================= */
 
 export interface DonutSeg {
+  id?: string;
   label: string;
   value: number;
   color: string;
@@ -17,6 +18,7 @@ export function Donut({
   thickness = 27,
   hovered,
   onHover,
+  onClick,
 }: {
   segments: DonutSeg[];
   currency: string;
@@ -24,6 +26,7 @@ export function Donut({
   thickness?: number;
   hovered: number | null;
   onHover: (i: number | null) => void;
+  onClick?: (i: number) => void;
 }) {
   const mounted = useMounted(60);
   const total = segments.reduce((s, x) => s + x.value, 0);
@@ -67,6 +70,7 @@ export function Donut({
               }}
               onMouseEnter={() => onHover(i)}
               onMouseLeave={() => onHover(null)}
+              onClick={() => onClick?.(i)}
             />
           );
         })}
@@ -99,9 +103,11 @@ export function Donut({
 export function FlowBars({
   data,
   currency,
+  onBarClick,
 }: {
   data: { key: string; label: string; income: number; expense: number; current?: boolean }[];
   currency: string;
+  onBarClick?: (monthKey: string, type: "income" | "expense") => void;
 }) {
   const mounted = useMounted(120);
   const [hover, setHover] = useState<number | null>(null);
@@ -131,18 +137,20 @@ export function FlowBars({
             )}
             <div className="flex h-full items-end justify-center gap-1 sm:gap-1.5">
               <div
-                className="w-3 rounded-t-[5px] bg-moss sm:w-4"
+                className="w-3 rounded-t-[5px] bg-moss sm:w-4 cursor-pointer hover:bg-moss-deep transition-colors"
                 style={{
                   height: mounted ? `${(d.income / max) * 100}%` : "0%",
                   transition: `height 0.7s cubic-bezier(0.2,0.7,0.2,1) ${i * 70}ms`,
                 }}
+                onClick={() => onBarClick?.(d.key, "income")}
               />
               <div
-                className="w-3 rounded-t-[5px] bg-coral/85 sm:w-4"
+                className="w-3 rounded-t-[5px] bg-coral/85 sm:w-4 cursor-pointer hover:bg-coral transition-colors"
                 style={{
                   height: mounted ? `${(d.expense / max) * 100}%` : "0%",
                   transition: `height 0.7s cubic-bezier(0.2,0.7,0.2,1) ${i * 70 + 40}ms`,
                 }}
+                onClick={() => onBarClick?.(d.key, "expense")}
               />
             </div>
             <span
@@ -217,6 +225,8 @@ export function Sparkline({
 }
 
 /* ================= Ranked horizontal bars ================= */
+
+export const RankBars = RankRows;
 
 export function RankRows({
   items,

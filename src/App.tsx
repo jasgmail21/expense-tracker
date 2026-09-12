@@ -37,7 +37,7 @@ function Shell() {
         <div className="mx-auto w-full max-w-[1180px] px-4 pb-32 pt-6 sm:px-6 lg:px-10 lg:pb-24 lg:pt-10">
           <div key={view} className="anim-rise">
             {view === "overview" && (
-              <Overview monthKey={monthKey} onMonth={setMonthKey} onAdd={openAdd} goTo={setView} />
+              <Overview monthKey={monthKey} onMonth={setMonthKey} onAdd={openAdd} onEdit={openEdit} goTo={setView} />
             )}
             {view === "transactions" && <Transactions onAdd={openAdd} onEdit={openEdit} />}
             {view === "budgets" && <Budgets monthKey={monthKey} onMonth={setMonthKey} />}
@@ -86,7 +86,7 @@ function Shell() {
       <AddFAB onAdd={openAdd} />
       <ToastHost />
 
-      {txModal.open && <TransactionModal initial={txModal.tx} onClose={closeTx} />}
+      {txModal.open && <TransactionModal initial={txModal.tx ?? undefined} onClose={closeTx} />}
       {cloudOpen && <CloudModal onClose={() => setCloudOpen(false)} />}
     </div>
   );

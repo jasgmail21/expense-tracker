@@ -36,85 +36,79 @@ export const ICON_CHOICES = [
 ];
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: "groceries", name: "Groceries", color: "#3e8e5f", icon: "cart", type: "expense", budget: 8000 },
-  { id: "dining", name: "Dining Out", color: "#d97e36", icon: "utensils", type: "expense", budget: 4000 },
-  { id: "transport", name: "Transport", color: "#4e7fb0", icon: "car", type: "expense", budget: 3500 },
-  { id: "housing", name: "Housing", color: "#8a5fa0", icon: "home", type: "expense", budget: 25000 },
-  { id: "utilities", name: "Utilities", color: "#c9a227", icon: "bolt", type: "expense", budget: 3500 },
-  { id: "entertainment", name: "Entertainment", color: "#c75d7a", icon: "film", type: "expense", budget: 2000 },
-  { id: "health", name: "Health", color: "#3fa5a0", icon: "pulse", type: "expense", budget: 2500 },
-  { id: "shopping", name: "Shopping", color: "#b0563b", icon: "bag", type: "expense", budget: 5000 },
-  { id: "travel", name: "Travel", color: "#31708e", icon: "plane", type: "expense", budget: 6000 },
-  { id: "salary", name: "Salary", color: "#2f7e58", icon: "briefcase", type: "income" },
-  { id: "freelance", name: "Freelance", color: "#4e9e77", icon: "laptop", type: "income" },
-  { id: "invest", name: "Investments", color: "#276e5a", icon: "trend", type: "income" },
+  // Income
+  { id: "cat-salary", name: "Salary", color: "#2f7e58", icon: "briefcase", type: "income" },
+  { id: "cat-freelance", name: "Freelance", color: "#4f7ac2", icon: "laptop", type: "income" },
+  { id: "cat-invest", name: "Investments", color: "#7a6bc9", icon: "trend", type: "income" },
+  { id: "cat-other-income", name: "Other Income", color: "#3d8f8a", icon: "coins", type: "income" },
+
+  // Expense
+  { id: "cat-groceries", name: "Groceries", color: "#2f7e58", icon: "cart", type: "expense", budget: 8000 },
+  { id: "cat-dining", name: "Dining Out", color: "#c2703e", icon: "utensils", type: "expense", budget: 4000 },
+  { id: "cat-transport", name: "Transport", color: "#4f7ac2", icon: "car", type: "expense", budget: 5000 },
+  { id: "cat-housing", name: "Housing", color: "#8a5a3b", icon: "home", type: "expense", budget: 20000 },
+  { id: "cat-utilities", name: "Utilities", color: "#a3802c", icon: "bolt", type: "expense", budget: 3000 },
+  { id: "cat-entertainment", name: "Entertainment", color: "#b64f6e", icon: "film", type: "expense", budget: 2000 },
+  { id: "cat-shopping", name: "Shopping", color: "#7a6bc9", icon: "bag", type: "expense", budget: 5000 },
+  { id: "cat-health", name: "Health", color: "#3d8f8a", icon: "pulse", type: "expense", budget: 2000 },
+  { id: "cat-travel", name: "Travel", color: "#5b7f3b", icon: "plane", type: "expense" },
+  { id: "cat-uncategorized", name: "Uncategorized", color: "#8a5a3b", icon: "receipt", type: "expense" },
 ];
 
-const FREELANCE_CLIENTS = ["Brightloop", "Atlas & Co", "Fernwood Café"];
-const GROCERY_NOTES = ["Green Basket groceries", "Farmers market haul", "Corner store run", "Pantry restock"];
-const DINING_NOTES = ["Ramen night", "Coffee & pastry", "Tacos with friends", "Sunday brunch", "Pizza delivery"];
+const GROCERY_NOTES = ["Weekly vegetables", "BigBasket order", "DMart run", "Monthly staples", "Fruits & dairy"];
+const DINING_NOTES = ["Pizza at Caldo", "Dinner at Dhaba", "Coffee at Barista", "Lunch with team", "Weekend brunch"];
+const FREELANCE_CLIENTS = ["Northwind Studio", "Acme Corp", "Pixel Labs", "CodeCraft"];
 
-/** ~6 months of realistic, deterministic demo activity so every chart is alive on first load */
 export function buildSeedTransactions(): Transaction[] {
-  const rand = mulberry32(0x5eed1);
+  const rand = mulberry32(42);
   const ri = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min;
-  const rf = (min: number, max: number) => round2(min + rand() * (max - min));
-  const pick = <T>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
+  const rf = (min: number, max: number) => round2(rand() * (max - min) + min);
+  const pick = <T>(arr: T[]) => arr[ri(0, arr.length - 1)];
 
   const txs: Transaction[] = [];
-  let n = 0;
-  const now = new Date();
+  const add = (day: number, type: "income" | "expense", cat: string, amount: number, note: string) => {
+    const d = new Date();
+    d.setDate(d.getDate() - day);
+    txs.push({
+      id: `seed-${txs.length}`,
+      type,
+      amount,
+      categoryId: `cat-${cat}`,
+      note,
+      date: toISO(d),
+      updatedAt: Date.now(),
+    });
+  };
 
-  for (let back = 5; back >= 0; back--) {
-    const base = new Date(now.getFullYear(), now.getMonth() - back, 1);
-    const maxDay =
-      back === 0 ? now.getDate() : new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-    const add = (
-      day: number,
-      type: Transaction["type"],
-      categoryId: string,
-      amount: number,
-      note: string
-    ) => {
-      if (day > maxDay) return;
-      txs.push({
-        id: `seed-${n++}`,
-        type,
-        categoryId,
-        amount: round2(amount),
-        note,
-        date: toISO(new Date(base.getFullYear(), base.getMonth(), day)),
-      });
-    };
-
+  for (let back = 0; back < 6; back++) {
     // income
-    add(1, "income", "salary", 52000, "Monthly salary · Northwind Studio");
+    add(back * 30 + 1, "income", "salary", 52000, "Monthly salary · Northwind Studio");
     if (back % 2 === 0)
-      add(ri(14, 20), "income", "freelance", rf(6000, 15000), `Freelance sprint · ${pick(FREELANCE_CLIENTS)}`);
-    if (back === 1 || back === 3) add(20, "income", "invest", rf(450, 1100), "Dividends · index fund");
+      add(back * 30 + ri(14, 20), "income", "freelance", rf(6000, 15000), `Freelance sprint · ${pick(FREELANCE_CLIENTS)}`);
+    if (back === 1 || back === 3) add(back * 30 + 20, "income", "invest", rf(450, 1100), "Dividends · index fund");
 
     // fixed expenses
-    add(2, "expense", "housing", 18000, "Rent · apartment");
-    add(6, "expense", "utilities", rf(900, 2200), "Power & water bill");
-    add(7, "expense", "utilities", 499, "Fiber internet");
-    add(3, "expense", "health", 1200, "Gym membership");
+    add(back * 30 + 2, "expense", "housing", 18000, "Rent · apartment");
+    add(back * 30 + 6, "expense", "utilities", rf(900, 2200), "Power & water bill");
+    add(back * 30 + 7, "expense", "utilities", 499, "Fiber internet");
+    add(back * 30 + 3, "expense", "health", 1200, "Gym membership");
 
     // variable expenses
     for (let i = 0; i < 4; i++)
-      if (rand() < 0.9) add(ri(3, 27), "expense", "groceries", rf(350, 1400), pick(GROCERY_NOTES));
+      if (rand() < 0.9) add(back * 30 + ri(3, 27), "expense", "groceries", rf(350, 1400), pick(GROCERY_NOTES));
     for (let i = 0; i < 3; i++)
-      if (rand() < 0.85) add(ri(3, 27), "expense", "dining", rf(180, 900), pick(DINING_NOTES));
-    add(ri(3, 25), "expense", "transport", 500, "Metro card top-up");
-    if (rand() < 0.8) add(ri(3, 26), "expense", "transport", rf(1800, 3200), "Fuel");
-    if (rand() < 0.7) add(ri(3, 26), "expense", "transport", rf(120, 350), "Rideshare home");
-    add(8, "expense", "entertainment", 199, "Streaming subscription");
+      if (rand() < 0.85) add(back * 30 + ri(3, 27), "expense", "dining", rf(180, 900), pick(DINING_NOTES));
+    add(back * 30 + ri(3, 25), "expense", "transport", 500, "Metro card top-up");
+    if (rand() < 0.8) add(back * 30 + ri(3, 26), "expense", "transport", rf(1800, 3200), "Fuel");
+    if (rand() < 0.7) add(back * 30 + ri(3, 26), "expense", "transport", rf(120, 350), "Rideshare home");
+    add(back * 30 + 8, "expense", "entertainment", 199, "Streaming subscription");
     if (rand() < 0.8)
-      add(ri(5, 26), "expense", "entertainment", rf(250, 800), pick(["Cinema tickets", "Live music night", "Museum pass"]));
+      add(back * 30 + ri(5, 26), "expense", "entertainment", rf(250, 800), pick(["Cinema tickets", "Live music night", "Museum pass"]));
     if (rand() < 0.75)
-      add(ri(4, 26), "expense", "shopping", rf(400, 3500), pick(["Bookshop haul", "New running shoes", "Home goods", "Gift for Ana"]));
-    if (rand() < 0.5) add(ri(4, 26), "expense", "health", rf(150, 900), "Pharmacy");
-    if (back === 2) add(18, "expense", "travel", 5400, "Weekend trip · Coorg");
-    if (back === 4) add(11, "expense", "travel", 7200, "Flights home");
+      add(back * 30 + ri(4, 26), "expense", "shopping", rf(400, 3500), pick(["Bookshop haul", "New running shoes", "Home goods", "Gift for Ana"]));
+    if (rand() < 0.5) add(back * 30 + ri(4, 26), "expense", "health", rf(150, 900), "Pharmacy");
+    if (back === 2) add(back * 30 + 18, "expense", "travel", 5400, "Weekend trip · Coorg");
+    if (back === 4) add(back * 30 + 11, "expense", "travel", 7200, "Flights home");
   }
 
   return txs;

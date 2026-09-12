@@ -74,14 +74,8 @@ function loadInitial(): PersistedState {
   } catch {
     /* fall through */
   }
-  /* Fresh browser:
-     - cloud already configured → start EMPTY; Supabase is the source of truth
-       and the first sync will fill the ledger (or leave it empty).
-     - pure local mode → seed demo data so the app opens alive. */
   return loadCloudConfig() ? emptyState() : seedState();
 }
-
-/* ---------- dirty tracking (persists across restarts) ---------- */
 
 function loadDirty(): { tx: Set<string>; cat: Set<string>; settings: boolean } {
   try {
@@ -178,8 +172,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const syncingRef = useRef(false);
   const lastErrToast = useRef(0);
 
-  /* ---------- toasts ---------- */
-
   const dismissToast = useCallback((id: number) => {
     setToasts((ts) => ts.filter((t) => t.id !== id));
   }, []);
@@ -193,17 +185,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [dismissToast]
   );
 
-  /* ---------- persist local copy ---------- */
-
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
-      /* storage full or blocked — app still works in-memory */
+      /* storage full or blocked */
     }
   }, [state]);
-
-  /* ---------- cloud sync core ---------- */
 
   const doSync = useCallback(
     async (manual: boolean) => {
@@ -304,8 +292,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [scheduleSync]
   );
 
-  /* ---------- boot: restore session + connectivity listeners ---------- */
-
   useEffect(() => {
     const cfg = loadCloudConfig();
     let cancelled = false;
@@ -340,21 +326,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("offline", goOffline);
       if (syncTimer.current) window.clearTimeout(syncTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* sync once a session appears — Supabase is the source of truth:
-     cloud data replaces the local copy; only genuine local edits (the
-     persisted dirty set) are pushed up. An empty cloud → an empty app. */
   useEffect(() => {
     if (cloud.user && clientRef.current) {
       const t = window.setTimeout(() => void doSync(false), 400);
       return () => window.clearTimeout(t);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloud.user?.id]);
-
-  /* ---------- api ---------- */
 
   const api = useMemo<AppApi>(() => {
     const now = () => Date.now();
@@ -398,7 +377,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (tx) {
           pushToast({
             kind: "info",
-            message: `Deleted “${tx.note || categoryOf(tx.categoryId)?.name || "transaction"}”`,
+            message: `Deleted "${tx.note || categoryOf(tx.categoryId)?.name || "transaction"}"`,
             action: {
               label: "Undo",
               fn: () => {
@@ -439,13 +418,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           (x) => x.name.toLowerCase() === name.toLowerCase() && x.type === c.type
         );
         if (dupe) {
-          pushToast({ kind: "error", message: `A ${c.type} category named “${name}” already exists` });
+          pushToast({ kind: "error", message: `A ${c.type} category named "${name}" already exists` });
           return null;
         }
         const cat: Category = { ...c, name, id: `cat-${uid()}`, updatedAt: now() };
         setState((s) => ({ ...s, categories: [...s.categories, cat] }));
         markDirtyAndSync("cat", cat.id);
-        pushToast({ kind: "success", message: `Category “${name}” created` });
+        pushToast({ kind: "success", message: `Category "${name}" created` });
         return cat;
       },
 
@@ -456,7 +435,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           (x) => x.id !== c.id && x.name.toLowerCase() === name.toLowerCase() && x.type === c.type
         );
         if (dupe) {
-          pushToast({ kind: "error", message: `A ${c.type} category named “${name}” already exists` });
+          pushToast({ kind: "error", message: `A ${c.type} category named "${name}" already exists` });
           return;
         }
         const next: Category = { ...c, name, updatedAt: now() };
@@ -465,7 +444,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           categories: s.categories.map((x) => (x.id === c.id ? next : x)),
         }));
         markDirtyAndSync("cat", c.id);
-        pushToast({ kind: "success", message: `Category “${name}” updated` });
+        pushToast({ kind: "success", message: `Category "${name}" updated` });
       },
 
       deleteCategory(id) {
@@ -474,14 +453,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (inUse) {
           pushToast({
             kind: "error",
-            message: `“${cat?.name}” can’t be deleted — transactions still use it`,
+            message: `"${cat?.name}" can't be deleted — transactions still use it`,
           });
           return;
         }
         setState((s) => ({ ...s, categories: s.categories.filter((c) => c.id !== id) }));
         addTombstone({ table: "categories", id, at: now() });
         markDirtyAndSync("cat");
-        pushToast({ kind: "info", message: `Category “${cat?.name}” deleted` });
+        pushToast({ kind: "info", message: `Category "${cat?.name}" deleted` });
       },
 
       setCurrency(code) {
@@ -499,7 +478,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (cfg?.enabled && cfg.spreadsheetId) {
           pushToast({
             kind: "success",
-            message: `Live sheet sync saved${cfg.tabName ? ` — tab “${cfg.tabName}”` : ""}. It runs on every sync.`,
+            message: `Live sheet sync saved${cfg.tabName ? ` — tab "${cfg.tabName}"` : ""}. It runs on every sync.`,
           });
           scheduleSync(600);
         } else {
@@ -571,13 +550,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       },
 
-      /* ---------- cloud actions ---------- */
-
       async connectCloud(cfg) {
         const url = cfg.url.trim().replace(/\/$/, "");
         const anonKey = cfg.anonKey.trim();
         if (!/^https:\/\/.+\.supabase\.co$/.test(url)) {
-          return "That doesn’t look like a Supabase project URL (https://xxxx.supabase.co).";
+          return "That doesn't look like a Supabase project URL (https://xxxx.supabase.co).";
         }
         if (anonKey.length < 20)
           return "That publishable key looks too short — copy the full key from Project Settings → API keys.";

@@ -59,7 +59,7 @@ export function CloudModal({ onClose }: { onClose: () => void }) {
       return;
     }
     if (!id) {
-      setSheetErr("Paste your spreadsheet link (or its ID) — it’s the long code in the sheet URL.");
+      setSheetErr("Paste your spreadsheet link (or its ID) — it's the long code in the sheet URL.");
       return;
     }
     setSheetConfig({ spreadsheetId: id, tabName: sheetTab.trim(), enabled: true });
@@ -89,7 +89,7 @@ export function CloudModal({ onClose }: { onClose: () => void }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      setFormErr("Couldn’t reach the clipboard — select the SQL text and copy manually.");
+      setFormErr("Couldn't reach the clipboard — select the SQL text and copy manually.");
     }
   };
 
@@ -169,7 +169,7 @@ export function CloudModal({ onClose }: { onClose: () => void }) {
               </div>
               <p className="mt-3 text-[12px] leading-5 text-ink-soft">
                 Sign in with this account on any other device — the ledger merges automatically
-                (last edit wins). Changes made offline are queued and pushed when you’re back online.
+                (last edit wins). Changes made offline are queued and pushed when you're back online.
               </p>
             </div>
           )}
@@ -243,7 +243,7 @@ export function CloudModal({ onClose }: { onClose: () => void }) {
                     <span>
                       Go to <b>Project Settings → API keys</b> and copy the <b>Project URL</b> and the{" "}
                       <b>Publishable key</b> (starts with <span className="num">sb_publishable_</span> — it replaces
-                      the old “anon” key). Never use the <span className="num">sb_secret_</span> key in a browser.
+                      the old "anon" key). Never use the <span className="num">sb_secret_</span> key in a browser.
                     </span>
                   </li>
                   <li className="flex gap-3">
@@ -333,7 +333,7 @@ export function CloudModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="flex flex-wrap items-end gap-2">
                   <div className="min-w-[190px] flex-1">
-                    <label className="stamp mb-1 block text-ink-soft">This month’s tab</label>
+                    <label className="stamp mb-1 block text-ink-soft">This month's tab</label>
                     <input
                       className="field"
                       placeholder="e.g. September 2026"
@@ -354,7 +354,7 @@ export function CloudModal({ onClose }: { onClose: () => void }) {
                   Every sync fetches that tab (columns auto-detected — Summary/Type/Payment Type/Amount/Date all work),
                   skips rows you already have, files entries into matching categories and creates missing ones.
                   <b className="text-ink-soft"> New month? Change the tab name above and save.</b> The sheet must be
-                  shared as <b className="text-ink-soft">“Anyone with the link”</b>. This setting syncs to your other devices.
+                  shared as <b className="text-ink-soft">"Anyone with the link"</b>. This setting syncs to your other devices.
                 </p>
               </div>
             </div>

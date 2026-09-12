@@ -1,8 +1,6 @@
 import type { TxType } from "./types";
 import { round2, toISO } from "./utils";
 
-/* ================= CSV / value parsing (shared by manual import + live sheet sync) ================= */
-
 export function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -40,35 +38,33 @@ function ymd(y: number, m: number, d: number): string | null {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-/** Accepts: 2021-03-05 · 05/03/2021 · 3/5/21 · 05-Mar-2021 · 1-Sep-2026 · Mar 5, 2021 ·
- *  5 March 2021 · 2021/03/05 · 05.03.2021 · epoch ms/s · and anything Date.parse knows. */
 export function parseDate(s: string): string | null {
-  s = s.trim().replace(/[\u200e\u200f\u00a0]/g, ""); // strip LRM/RLM marks Sheets exports
+  s = s.trim().replace(/[\u200e\u200f\u00a0]/g, "");
   if (!s) return null;
 
-  let m = s.match(/^(\d{10})(\d{3})?$/); // epoch
+  let m = s.match(/^(\d{10})(\d{3})?$/);
   if (m) {
     const d = new Date(m[2] ? Number(s) : Number(s) * 1000);
     return isNaN(d.getTime()) ? null : toISO(d);
   }
 
-  m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/); // ISO / yyyy/mm/dd
+  m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
   if (m) return ymd(Number(m[1]), Number(m[2]), Number(m[3]));
 
-  m = s.match(/^(\d{1,2})[ \-/.]([A-Za-z]{3,9})[ \-/.]*(\d{2,4})$/); // 5 Mar 2021 / 05-Mar-21
+  m = s.match(/^(\d{1,2})[ \-/.]([A-Za-z]{3,9})[ \-/.]*(\d{2,4})$/);
   if (m && MONTHS[m[2].slice(0, 3).toLowerCase()])
     return ymd(Number(m[3]), MONTHS[m[2].slice(0, 3).toLowerCase()], Number(m[1]));
 
-  m = s.match(/^([A-Za-z]{3,9})[ \-/.](\d{1,2}),?\s*(\d{2,4})$/); // Mar 5, 2021
+  m = s.match(/^([A-Za-z]{3,9})[ \-/.](\d{1,2}),?\s*(\d{2,4})$/);
   if (m && MONTHS[m[1].slice(0, 3).toLowerCase()])
     return ymd(Number(m[3]), MONTHS[m[1].slice(0, 3).toLowerCase()], Number(m[2]));
 
-  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/); // d/m/y — assume day-first (India), auto-swap if impossible
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
   if (m) {
     const a = Number(m[1]); const b = Number(m[2]); const y = Number(m[3]);
-    if (a > 12 && b <= 12) return ymd(y, b, a); // clearly day-first (25/03/2021)
-    if (b > 12 && a <= 12) return ymd(y, a, b); // clearly month-first (03/25/2021)
-    return ymd(y, b, a) ?? ymd(y, a, b); // ambiguous → day-first, then month-first
+    if (a > 12 && b <= 12) return ymd(y, b, a);
+    if (b > 12 && a <= 12) return ymd(y, a, b);
+    return ymd(y, b, a) ?? ymd(y, a, b);
   }
 
   const d = new Date(s);
@@ -76,16 +72,15 @@ export function parseDate(s: string): string | null {
   return null;
 }
 
-/** Handles $1,234.56 · ₹12,34,567.89 · 1.234,56 · 45,00 · (45.00) · -45 · plain numbers. */
 export function parseAmount(s: string): number | null {
   let t = s.trim().replace(/[^\d.,\-+()]/g, "");
   if (!t) return null;
   const negParen = /^\(.*\)$/.test(t);
   if (t.includes(",") && t.includes(".")) {
-    if (t.lastIndexOf(",") > t.lastIndexOf(".")) t = t.replace(/\./g, "").replace(/,/g, "."); // EU 1.234,56
-    else t = t.replace(/,/g, ""); // US / Indian 1,234.56 / 12,34,567.89
+    if (t.lastIndexOf(",") > t.lastIndexOf(".")) t = t.replace(/\./g, "").replace(/,/g, ".");
+    else t = t.replace(/,/g, "");
   } else if (t.includes(",")) {
-    t = /,\d{1,2}$/.test(t) ? t.replace(",", ".") : t.replace(/,/g, ""); // 45,00 → decimal · 1,234 → thousands
+    t = /,\d{1,2}$/.test(t) ? t.replace(",", ".") : t.replace(/,/g, "");
   }
   const v = parseFloat(t);
   if (isNaN(v)) return null;
@@ -101,46 +96,18 @@ export function parseType(s: string | null, amount: number, allExpense: boolean)
       return "expense";
   }
   if (amount < 0) return "expense";
-  return allExpense ? "expense" : "income";
+  return allExpense ? "expense" : "expense";
 }
 
 export function parsePayment(s: string | null): "cash" | "card" | undefined {
   if (!s) return undefined;
-  const v = s.toLowerCase();
-  if (/cash|upi|gpay|paytm|phonepe|neft|imps|net ?banking/.test(v)) return "cash";
-  if (/card|credit|debit|amex|visa|master|\bcc\b/.test(v)) return "card";
+  const v = s.toLowerCase().trim();
+  if (/cash|upi|gpay|paytm|phonepe/.test(v)) return "cash";
+  if (/card|credit|debit|amex|visa|master/.test(v)) return "card";
   return undefined;
 }
 
-export interface Mapping {
-  date: number;
-  amount: number;
-  type: number;
-  category: number;
-  note: number;
-  payment: number;
-}
-
-/** Word-boundary matching so e.g. "Summary" never steals the "sum/amount" slot. */
-export function guessMapping(headers: string[]): Mapping {
-  const h = headers.map((x) => x.toLowerCase().trim());
-  const findIdx = (re: RegExp, skip: number[]) =>
-    h.findIndex((x, i) => !skip.includes(i) && re.test(x));
-  const date = findIdx(/\b(date|day|when)\b/, []);
-  const amount = findIdx(/\b(amount|amt|value|total|price|cost|sum|rs|inr)\b/, [date]);
-  const type = findIdx(/\b(type|kind|flow|direction)\b|in\s*\/\s*out/, [date, amount]);
-  const payment = findIdx(/\b(payment|paid|pay|mode|channel|via|method)\b/, [date, amount, type]);
-  const category = findIdx(/\b(categor(y|ies)?|group|tag|class|bucket|head)\b/, [date, amount, type, payment]);
-  const note = findIdx(
-    /\b(note|summary|desc(ription)?|memo|detail(s)?|item|particular(s)?|payee|merchant|label|narration|remark(s)?|name)\b/,
-    [date, amount, type, payment, category]
-  );
-  return { date, amount, type, category, note, payment };
-}
-
-/* -------- smart category inference from the note text -------- */
-
-export const NOTE_RULES: { re: RegExp; cat: string; income?: boolean }[] = [
+const NOTE_RULES: { re: RegExp; cat: string; type?: TxType }[] = [
   { re: /\bitr\b|tds|tax|challan/i, cat: "Taxes" },
   { re: /wedding|marriage|shaadi|lehnga|tent|\bdj\b/i, cat: "Celebrations" },
   { re: /dasvand|donat|charity|seva|gave\b/i, cat: "Charity & Giving" },
@@ -153,29 +120,54 @@ export const NOTE_RULES: { re: RegExp; cat: string; income?: boolean }[] = [
   { re: /doctor|medicine|pharmacy|hospital|gym|medical|clinic/i, cat: "Health" },
   { re: /movie|cinema|netflix|spotify|concert|party|subscription/i, cat: "Entertainment" },
   { re: /flight|hotel|trip|travel|vacation|irctc|airbnb/i, cat: "Travel" },
-  { re: /salary|payroll|wages|bonus|variable/i, cat: "Salary", income: true },
-  { re: /freelance|invoice|client/i, cat: "Freelance", income: true },
-  { re: /dividend|interest|mutual|\bsip\b|\bmf\b|invest/i, cat: "Investments", income: true },
-  { re: /reimburse|refund|cashback|wallet/i, cat: "Other Income", income: true },
+  { re: /salary|payroll|wages|bonus|variable/i, cat: "Salary", type: "income" },
+  { re: /freelance|invoice|client/i, cat: "Freelance", type: "income" },
+  { re: /dividend|interest|mutual|\bsip\b|\bmf\b|invest/i, cat: "Investments", type: "income" },
+  { re: /reimburse|refund|cashback|wallet/i, cat: "Other Income", type: "income" },
 ];
 
-export function inferCategory(
-  note: string,
-  type: TxType,
-  cats: { name: string; type: TxType }[]
-): string | null {
-  const n = note.toLowerCase();
-  if (!n.trim()) return null;
-  for (const r of NOTE_RULES) {
-    if (r.income && type !== "income") continue;
-    if (!r.income && type !== "expense") continue;
-    if (r.re.test(n)) return r.cat;
-  }
-  for (const c of cats) {
-    if (c.type !== type || c.name.length < 4) continue;
-    if (n.includes(c.name.toLowerCase())) return c.name;
+export function inferCategory(note: string, type: TxType, cats: { name: string; type: TxType }[]): string | null {
+  if (!note) return null;
+  for (const rule of NOTE_RULES) {
+    if (rule.re.test(note)) {
+      if (rule.type && rule.type !== type) continue;
+      const match = cats.find((c) => c.name.toLowerCase() === rule.cat.toLowerCase());
+      if (match) return match.name;
+      return rule.cat;
+    }
   }
   return null;
+}
+
+export interface Mapping {
+  date: number;
+  amount: number;
+  type: number;
+  category: number;
+  note: number;
+  payment: number;
+}
+
+function guessMapping(headers: string[]): Mapping {
+  const h = headers.map((x) => x.toLowerCase().trim());
+  const findWord = (keys: string[], skip: number[] = []) => {
+    for (let i = 0; i < h.length; i++) {
+      if (skip.includes(i)) continue;
+      const cell = h[i];
+      for (const key of keys) {
+        const re = new RegExp(`\\b${key}\\b`, "i");
+        if (re.test(cell)) return i;
+      }
+    }
+    return -1;
+  };
+  const date = findWord(["date", "day", "when", "time"]);
+  const amount = findWord(["amount", "value", "sum", "total", "price", "cost"], [date]);
+  const type = findWord(["type", "kind", "flow", "in/out", "direction"], [date, amount]);
+  const category = findWord(["categor", "group", "tag", "class", "bucket"], [date, amount, type]);
+  const note = findWord(["summary", "note", "desc", "memo", "detail", "item", "payee", "merchant", "label"], [date, amount, type, category]);
+  const payment = findWord(["payment", "paid", "mode", "method", "via", "cash/card"], [date, amount, type, category, note]);
+  return { date, amount, type, category, note, payment };
 }
 
 export interface ParsedTx {
@@ -185,7 +177,6 @@ export interface ParsedTx {
   categoryName: string;
   note: string;
   payment?: "cash" | "card";
-  /** Original row number in the source (1-indexed, including header if present) */
   rowNumber?: number;
 }
 
@@ -206,12 +197,10 @@ export function buildParsed(
 ): Parsed | null {
   const firstNl = text.indexOf("\n");
   const firstLine = firstNl === -1 ? text : text.slice(0, firstNl);
-  if (firstLine.includes("\t")) text = text.replace(/\t/g, ","); // pasted straight from a sheet
+  if (firstLine.includes("\t")) text = text.replace(/\t/g, ",");
   const rows = parseCSV(text);
   if (rows.length === 0) return null;
   
-  /* Auto-detect headerless CSVs: if the first row's first cell parses as a date
-     or amount, treat the entire file as data (no header row). */
   let detectedNoHeader = noHeader;
   if (!noHeader && rows.length > 0) {
     const firstCell = rows[0][0]?.trim() ?? "";
@@ -231,8 +220,6 @@ export function buildParsed(
   if (mapping.amount < 0) mapping.amount = headers.length > 1 ? 1 : 0;
   if (mapping.date < 0) mapping.date = 0;
 
-  /* Self-heal: if the guessed columns parse zero rows, scan every
-     column pair for date×amount, then every remaining column for type/payment/note. */
   const readyCount = (m: Mapping) =>
     dataRows.reduce(
       (acc, r) =>
@@ -256,13 +243,10 @@ export function buildParsed(
     if (best) Object.assign(mapping, best);
   }
   
-  /* If we're in no-header mode (or detected it), also self-heal type/payment/note
-     by scanning remaining columns for keyword matches in the data itself. */
   if (detectedNoHeader && dataRows.length > 0) {
     const usedCols = new Set([mapping.date, mapping.amount]);
     const sampleRow = dataRows[0];
     
-    // Find type column: look for a cell that matches type keywords
     if (mapping.type < 0) {
       for (let i = 0; i < sampleRow.length; i++) {
         if (usedCols.has(i)) continue;
@@ -275,7 +259,6 @@ export function buildParsed(
       }
     }
     
-    // Find payment column: look for cash/card/upi
     if (mapping.payment < 0) {
       for (let i = 0; i < sampleRow.length; i++) {
         if (usedCols.has(i)) continue;
@@ -288,7 +271,6 @@ export function buildParsed(
       }
     }
     
-    // Find note column: first remaining column with text
     if (mapping.note < 0) {
       for (let i = 0; i < sampleRow.length; i++) {
         if (usedCols.has(i)) continue;
@@ -322,7 +304,7 @@ export function buildParsed(
       categoryName,
       note,
       payment: parsePayment(mapping.payment >= 0 ? r[mapping.payment] : null),
-      rowNumber: detectedNoHeader ? i + 1 : i + 2, // +1 for 1-indexed, +2 if header exists
+      rowNumber: detectedNoHeader ? i + 1 : i + 2,
     });
   }
   return {
@@ -335,9 +317,6 @@ export function buildParsed(
   };
 }
 
-/* ================= Google Sheets fetch ================= */
-
-/** Accepts a full sheet URL or a raw spreadsheet id. */
 export function spreadsheetIdFromUrl(input: string): string | null {
   const t = input.trim();
   if (/^[a-zA-Z0-9-_]{20,}$/.test(t)) return t;
@@ -345,12 +324,6 @@ export function spreadsheetIdFromUrl(input: string): string | null {
   return m ? m[1] : null;
 }
 
-/**
- * Fetches a sheet as CSV without any API key:
- *  - normal sheet URL or id  → public gviz CSV endpoint (needs Share → Anyone with the link)
- *  - "Publish to web" CSV link → used as-is
- *  - tabName targets one specific tab (month-wise sheets)
- */
 export async function fetchSheetCSV(urlOrId: string, tabName?: string): Promise<string> {
   let u = urlOrId.trim();
   const id = spreadsheetIdFromUrl(u);
@@ -363,13 +336,13 @@ export async function fetchSheetCSV(urlOrId: string, tabName?: string): Promise<
   const res = await fetch(u);
   if (!res.ok) {
     throw new Error(
-      `Google returned ${res.status}. Open the sheet → Share → “Anyone with the link” (Viewer) — or use File → Share → Publish to web → CSV.`
+      `Google returned ${res.status}. Open the sheet → Share → "Anyone with the link" (Viewer) — or use File → Share → Publish to web → CSV.`
     );
   }
   const text = await res.text();
   if (text.trim().startsWith("<")) {
     throw new Error(
-      "Google returned a web page instead of CSV. The tab may not exist, or the sheet isn’t link-shared. Share → “Anyone with the link”, then retry."
+      "Google returned a web page instead of CSV. The tab may not exist, or the sheet isn't link-shared. Share → Anyone with the link, then retry."
     );
   }
   return text;

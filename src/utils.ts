@@ -13,32 +13,28 @@ export const CURRENCIES = [
 export function fmtMoney(
   n: number,
   currency: string,
-  opts: { compact?: boolean; decimals?: number } = {}
+  opts: { compact?: boolean; decimals?: boolean } = {}
 ): string {
   const abs = Math.abs(n);
-  const decimals = opts.decimals ?? (abs >= 1000 ? 0 : 2);
+  const decimals: number = opts.decimals === false ? 2 : (abs >= 1000 ? 0 : 2);
   try {
-    if (opts.compact && abs >= 10000) {
-      return new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency,
-        notation: "compact",
-        maximumFractionDigits: 1,
-      }).format(n);
-    }
-    return new Intl.NumberFormat(undefined, {
+    const formatOpts: Intl.NumberFormatOptions = {
       style: "currency",
       currency,
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }).format(n);
+      minimumFractionDigits: opts.compact ? 0 : decimals,
+      maximumFractionDigits: opts.compact ? 1 : decimals,
+    };
+    if (opts.compact && abs >= 10000) {
+      formatOpts.notation = "compact";
+    }
+    return new Intl.NumberFormat(undefined, formatOpts).format(n);
   } catch {
-    return `$${n.toFixed(2)}`;
+    return `₹${n.toFixed(2)}`;
   }
 }
 
 export function fmtSigned(t: Pick<Transaction, "type" | "amount">, currency: string): string {
-  return `${t.type === "income" ? "+" : "\u2212"}${fmtMoney(t.amount, currency)}`;
+  return `${t.type === "income" ? "+" : "−"}${fmtMoney(t.amount, currency)}`;
 }
 
 export function fmtPct(n: number, digits = 0): string {
@@ -46,17 +42,16 @@ export function fmtPct(n: number, digits = 0): string {
 }
 
 export function fmtAgo(ts: number): string {
-  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (s < 10) return "just now";
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  const diff = Date.now() - ts;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.floor(hr / 24);
+  return `${days}d ago`;
 }
-
-/* ---------------- dates ---------------- */
 
 export function toISO(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -116,14 +111,11 @@ export function daysInMonthKey(key: string): number {
   return new Date(y, m, 0).getDate();
 }
 
-/* ---------------- misc ---------------- */
-
 export function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/** deterministic PRNG for stable demo data */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {

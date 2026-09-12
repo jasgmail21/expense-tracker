@@ -2,10 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { fmtMoney } from "../utils";
 import { Icon, IconName } from "./Icons";
 
-/* ---------- shared class strings ---------- */
-
 export const BTN_PRIMARY =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-pine text-paper px-4 py-2.5 text-sm font-semibold border-2 border-pine shadow-[3px_3px_0_0_var(--color-moss)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--color-moss)] active:translate-y-0 active:shadow-[1px_1px_0_0_var(--color-moss)] cursor-pointer select-none";
+  "btn-primary inline-flex items-center justify-center gap-2 rounded-lg bg-pine text-paper px-4 py-2.5 text-sm font-semibold border-2 border-pine shadow-[3px_3px_0_0_var(--color-moss)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--color-moss)] active:translate-y-0 active:shadow-[1px_1px_0_0_var(--color-moss)] cursor-pointer select-none";
 
 export const BTN_DANGER =
   "inline-flex items-center justify-center gap-2 rounded-lg bg-coral text-paper px-4 py-2.5 text-sm font-semibold border-2 border-coral-deep shadow-[3px_3px_0_0_var(--color-coral-deep)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--color-coral-deep)] active:translate-y-0 cursor-pointer select-none";
@@ -15,8 +13,6 @@ export const BTN_GHOST =
 
 export const CARD = "bg-card border border-line rounded-xl";
 
-/* ---------- hooks ---------- */
-
 export function useMounted(delay = 80): boolean {
   const [m, setM] = useState(false);
   useEffect(() => {
@@ -25,8 +21,6 @@ export function useMounted(delay = 80): boolean {
   }, [delay]);
   return m;
 }
-
-/* ---------- Reveal on scroll ---------- */
 
 export function Reveal({
   children,
@@ -70,8 +64,6 @@ export function Reveal({
     </div>
   );
 }
-
-/* ---------- animated number ---------- */
 
 export function CountUp({
   value,
@@ -117,8 +109,6 @@ export function CountUp({
   );
 }
 
-/* ---------- segmented control ---------- */
-
 export function Segmented<T extends string>({
   options,
   value,
@@ -158,8 +148,6 @@ export function Segmented<T extends string>({
   );
 }
 
-/* ---------- animated progress bar ---------- */
-
 export function Bar({
   ratio,
   color,
@@ -188,8 +176,6 @@ export function Bar({
   );
 }
 
-/* ---------- empty state ---------- */
-
 export function EmptyState({
   icon = "sprout",
   title,
@@ -214,8 +200,6 @@ export function EmptyState({
     </div>
   );
 }
-
-/* ---------- misc ---------- */
 
 export function Dot({ color, size = 10 }: { color: string; size?: number }) {
   return (
@@ -247,5 +231,234 @@ export function DeltaPill({
       {Math.abs(pct).toFixed(0)}%
       <span className="font-body font-normal opacity-70">{suffix}</span>
     </span>
+  );
+}
+
+// Additional UI components needed by modals
+export function Button({
+  children,
+  onClick,
+  variant = "primary",
+  size = "md",
+  disabled = false,
+  type = "button",
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  size?: "sm" | "md" | "lg";
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  className?: string;
+}) {
+  const base = "inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "bg-pine text-paper border-2 border-pine shadow-[3px_3px_0_0_var(--color-moss)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--color-moss)] active:translate-y-0 active:shadow-[1px_1px_0_0_var(--color-moss)]",
+    secondary: "bg-card text-ink border-2 border-line hover:border-ink-faint hover:shadow-[2px_2px_0_0_var(--color-line)] active:shadow-none",
+    ghost: "bg-transparent text-ink-soft hover:text-ink hover:bg-line-soft",
+    danger: "bg-coral text-paper border-2 border-coral-deep shadow-[3px_3px_0_0_var(--color-coral-deep)] hover:-translate-y-0.5 hover:shadow-[5px_5px_0_0_var(--color-coral-deep)] active:translate-y-0",
+  };
+  
+  const sizes = {
+    sm: "px-3 py-1.5 text-sm",
+    md: "px-4 py-2.5 text-sm",
+    lg: "px-6 py-3 text-base",
+  };
+  
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  className = "",
+}: {
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  if (!open) return null;
+  
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pine/60 anim-fade"
+      onClick={onClose}
+    >
+      <div
+        className={`relative bg-card border-2 border-pine rounded-xl shadow-[8px_8px_0_0_rgba(13,33,26,0.35)] max-h-[90vh] w-full max-w-2xl flex flex-col anim-pop ${className}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+            <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
+            <button
+              onClick={onClose}
+              className="grid h-8 w-8 place-items-center rounded-md text-ink-faint hover:bg-line-soft hover:text-ink cursor-pointer"
+              aria-label="Close"
+            >
+              <Icon name="x" size={17} />
+            </button>
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export function Input({
+  label,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  required = false,
+  className = "",
+  ...props
+}: {
+  label?: string;
+  type?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className="space-y-1.5">
+      {label && (
+        <label className="block text-sm font-semibold text-ink-soft">
+          {label}
+        </label>
+      )}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        className={`w-full px-4 py-2.5 border-2 border-line rounded-lg bg-card text-ink placeholder:text-ink-faint focus:outline-none focus:border-moss transition-colors ${className}`}
+        {...props}
+      />
+    </div>
+  );
+}
+
+export function Select({
+  label,
+  value,
+  onChange,
+  children,
+  className = "",
+}: {
+  label?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      {label && (
+        <label className="block text-sm font-semibold text-ink-soft">
+          {label}
+        </label>
+      )}
+      <select
+        value={value}
+        onChange={onChange}
+        className={`w-full px-4 py-2.5 border-2 border-line rounded-lg bg-card text-ink focus:outline-none focus:border-moss transition-colors ${className}`}
+      >
+        {children}
+      </select>
+    </div>
+  );
+}
+
+export function Badge({
+  children,
+  variant = "default",
+  className = "",
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "success" | "warning" | "error";
+  className?: string;
+}) {
+  const variants = {
+    default: "bg-line-soft text-ink-soft",
+    success: "bg-mint-dim text-moss-deep",
+    warning: "bg-amber-soft text-amber",
+    error: "bg-coral-soft text-coral-deep",
+  };
+  
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${variants[variant]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function Card({
+  children,
+  className = "",
+  ...props
+}: {
+  children: React.ReactNode;
+  className?: string;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={`bg-card border border-line rounded-xl ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function SegmentedControl<T extends string>({
+  value,
+  onChange,
+  options,
+  className = "",
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string }[];
+  className?: string;
+}) {
+  return (
+    <div className={`inline-flex items-center gap-1 rounded-[10px] border border-line bg-paper p-1 ${className}`}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          onClick={() => onChange(option.value)}
+          className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all duration-150 cursor-pointer ${
+            value === option.value
+              ? "bg-pine text-mint shadow-sm"
+              : "text-ink-soft hover:text-ink hover:bg-line-soft"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   );
 }

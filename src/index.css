@@ -28,6 +28,14 @@
 
 html {
   scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
+/* ---------- smooth page transitions ---------- */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 body {
@@ -104,6 +112,62 @@ input[type="date"] { color-scheme: light; }
   text-transform: uppercase;
 }
 
+/* ---------- enhanced cards ---------- */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(13, 33, 26, 0.08);
+}
+
+/* ---------- enhanced buttons ---------- */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+.btn-primary:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* ---------- enhanced inputs ---------- */
+input:focus, select:focus, textarea:focus {
+  transform: translateY(-1px);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ---------- gradient accents ---------- */
+.gradient-mint {
+  background: linear-gradient(135deg, var(--color-mint) 0%, var(--color-mint-dim) 100%);
+}
+.gradient-moss {
+  background: linear-gradient(135deg, var(--color-moss) 0%, var(--color-moss-deep) 100%);
+}
+
+/* ---------- subtle shadows ---------- */
+.shadow-soft {
+  box-shadow: 0 2px 8px rgba(13, 33, 26, 0.06);
+}
+.shadow-medium {
+  box-shadow: 0 4px 16px rgba(13, 33, 26, 0.08);
+}
+.shadow-strong {
+  box-shadow: 0 8px 32px rgba(13, 33, 26, 0.12);
+}
+
 /* ---------- motion ---------- */
 @keyframes rise {
   from { opacity: 0; transform: translateY(16px); }
@@ -163,4 +227,303 @@ input[type="date"] { color-scheme: light; }
   background-size: 10px 1.5px;
   background-repeat: repeat-x;
   background-position: bottom;
+}
+
+/* ---------- glass morphism ---------- */
+.glass {
+  background: rgba(251, 252, 248, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(219, 228, 212, 0.5);
+}
+
+.glass-dark {
+  background: rgba(13, 33, 26, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(32, 70, 50, 0.5);
+}
+
+/* ---------- gradient text ---------- */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-moss) 0%, var(--color-mint) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-coral {
+  background: linear-gradient(135deg, var(--color-coral) 0%, var(--color-amber) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---------- animated gradient background ---------- */
+.animated-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ---------- glow effects ---------- */
+.glow-mint {
+  box-shadow: 0 0 20px rgba(169, 223, 188, 0.3);
+}
+
+.glow-moss {
+  box-shadow: 0 0 20px rgba(47, 126, 88, 0.3);
+}
+
+.glow-coral {
+  box-shadow: 0 0 20px rgba(207, 79, 54, 0.3);
+}
+
+/* ---------- enhanced hover effects ---------- */
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(13, 33, 26, 0.12);
+}
+
+.hover-scale {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(169, 223, 188, 0.4);
+}
+
+/* ---------- enhanced focus states ---------- */
+.focus-ring {
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.focus-ring:focus {
+  box-shadow: 0 0 0 3px rgba(47, 126, 88, 0.2);
+}
+
+.focus-ring-mint:focus {
+  box-shadow: 0 0 0 3px rgba(169, 223, 188, 0.4);
+}
+
+/* ---------- shimmer effect ---------- */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ---------- pulse animation ---------- */
+.pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ---------- bounce animation ---------- */
+.bounce-subtle {
+  animation: bounce-subtle 1s infinite;
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ---------- rotate animation ---------- */
+.rotate-slow {
+  animation: rotate 8s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- enhanced card effects ---------- */
+.card-3d {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: perspective(1000px) rotateX(2deg) rotateY(2deg) translateY(-4px);
+  box-shadow: 0 20px 40px rgba(13, 33, 26, 0.15);
+}
+
+/* ---------- border gradient ---------- */
+.border-gradient {
+  position: relative;
+  background: var(--color-card);
+  border-radius: 12px;
+}
+
+.border-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--color-mint), var(--color-moss));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* ---------- text shadow ---------- */
+.text-shadow-soft {
+  text-shadow: 0 2px 4px rgba(13, 33, 26, 0.1);
+}
+
+.text-shadow-strong {
+  text-shadow: 0 4px 8px rgba(13, 33, 26, 0.2);
+}
+
+/* ---------- backdrop blur ---------- */
+.backdrop-blur-soft {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-strong {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ---------- enhanced transitions ---------- */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ---------- skeleton loading ---------- */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-line-soft) 0%,
+    var(--color-line) 50%,
+    var(--color-line-soft) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- enhanced buttons ---------- */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-glow:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* ---------- enhanced inputs ---------- */
+.input-glow:focus {
+  box-shadow: 0 0 0 3px rgba(169, 223, 188, 0.3), 0 0 20px rgba(169, 223, 188, 0.2);
+}
+
+/* ---------- floating label effect ---------- */
+.float-label {
+  position: relative;
+}
+
+.float-label label {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  color: var(--color-ink-faint);
+}
+
+.float-label input:focus + label,
+.float-label input:not(:placeholder-shown) + label {
+  top: 0;
+  font-size: 12px;
+  background: var(--color-card);
+  padding: 0 4px;
+  color: var(--color-moss);
 }

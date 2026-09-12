@@ -20,7 +20,7 @@ export interface Transaction {
   note: string;
   /** ISO date yyyy-mm-dd (local) */
   date: string;
-  /** how it was paid — from the sheet's “Payment Type” column */
+  /** how it was paid — from the sheet's "Payment Type" column */
   payment?: "cash" | "card";
   /** Stable identifier from source (e.g., "sheet:tab_name:row_42") for deduplication */
   sourceRef?: string;

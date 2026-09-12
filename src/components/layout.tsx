@@ -23,7 +23,7 @@ export function MonthNav({
         <Icon name="chevL" size={17} />
       </button>
       <span className="num min-w-[92px] rounded-lg border border-line bg-card px-2 py-1.5 text-center text-[13px] font-bold text-ink">
-        {monthLabel(monthKey).split(" ")[0]} ’{monthLabel(monthKey).split(" ")[1].slice(2)}
+        {monthLabel(monthKey).split(" ")[0]} '{monthLabel(monthKey).split(" ")[1].slice(2)}
       </span>
       <button
         aria-label="Next month"
@@ -78,13 +78,13 @@ function CloudWidget({ onOpen }: { onOpen: () => void }) {
     : !cloud.user
       ? "Sign in to sync"
       : cloud.status === "syncing"
-        ? "Syncing…"
+        ? "Syncing..."
         : cloud.status === "error"
-          ? "Sync error — tap to fix"
+          ? "Sync error - tap to fix"
           : cloud.status === "offline"
-            ? "Offline — changes queued"
+            ? "Offline - changes queued"
             : cloud.lastSync
-              ? `Synced · ${fmtAgo(cloud.lastSync)}`
+              ? `Synced - ${fmtAgo(cloud.lastSync)}`
               : "Cloud connected";
   return (
     <button
@@ -175,21 +175,13 @@ export function Sidebar({
         </div>
         {cloud.user ? (
           <p className="text-[11px] leading-4 text-mint/40">
-            Cloud account active — Supabase is your source of truth; this browser keeps an
+            Cloud account active - Supabase is your source of truth; this browser keeps an
             offline cache only.
           </p>
         ) : (
-          <>
-            <button
-              onClick={resetDemo}
-              className="text-[12px] font-medium text-mint/50 underline decoration-mint/30 underline-offset-4 transition-colors hover:text-mint cursor-pointer"
-            >
-              Restore demo data
-            </button>
-            <p className="text-[11px] leading-4 text-mint/40">
-              Local mode — data lives in this browser. Connect Cloud sync to use any device.
-            </p>
-          </>
+          <p className="text-[11px] leading-4 text-mint/40">
+            Local mode - data lives in this browser. Connect Cloud sync to use any device.
+          </p>
         )}
       </div>
     </aside>

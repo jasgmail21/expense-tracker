@@ -6,11 +6,7 @@ import { uid } from "./utils";
 const CFG_KEY = "sprout.cloud.config";
 const TOMB_KEY = "sprout.cloud.tombstones";
 
-/* ---------------- schema (paste into Supabase SQL editor) ---------------- */
-
-export const SCHEMA_SQL = `-- ============================================
--- Sprout ledger schema · run in Supabase SQL editor
--- ============================================
+export const SCHEMA_SQL = `-- Sprout ledger schema
 create table if not exists public.transactions (
   id text primary key,
   user_id uuid not null,
@@ -23,10 +19,8 @@ create table if not exists public.transactions (
   source_ref text,
   updated_at bigint not null default 0
 );
--- safe to re-run: adds columns to projects created earlier
 alter table public.transactions add column if not exists payment text;
 alter table public.transactions add column if not exists source_ref text;
--- unique index for source-based deduplication (allows nulls for manually created transactions)
 create unique index if not exists idx_transactions_source_ref on public.transactions(user_id, source_ref) where source_ref is not null;
 
 create table if not exists public.categories (
@@ -46,10 +40,8 @@ create table if not exists public.settings (
   sheet_config text,
   updated_at bigint not null default 0
 );
--- safe to re-run: adds live-sheet-sync config to projects created earlier
 alter table public.settings add column if not exists sheet_config text;
 
--- optional: lets a Google Sheet push rows into your ledger
 create table if not exists public.sheet_inbox (
   id bigint generated always as identity primary key,
   date date,
@@ -61,60 +53,29 @@ create table if not exists public.sheet_inbox (
   source_ref text,
   created_at timestamptz default now()
 );
--- safe to re-run: adds columns to projects created earlier
 alter table public.sheet_inbox add column if not exists payment text;
 alter table public.sheet_inbox add column if not exists source_ref text;
 
 alter table public.transactions enable row level security;
-alter table public.categories   enable row level security;
-alter table public.settings     enable row level security;
-alter table public.sheet_inbox  enable row level security;
+alter table public.categories enable row level security;
+alter table public.settings enable row level security;
+alter table public.sheet_inbox enable row level security;
 
-create policy "own transactions" on public.transactions
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own categories" on public.categories
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own settings" on public.settings
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
--- sheets (anonymous script) may insert; signed-in devices read + clear
-create policy "sheet insert" on public.sheet_inbox
-  for insert to anon with check (true);
-create policy "sheet read" on public.sheet_inbox
-  for select to authenticated using (true);
-create policy "sheet clear" on public.sheet_inbox
-  for delete to authenticated using (true);
-
--- per-user primary keys (safe to re-run; migrates older installs in place)
-do $$
-begin
-  alter table public.transactions drop constraint if exists transactions_pkey;
-  alter table public.transactions add primary key (id, user_id);
-  alter table public.categories drop constraint if exists categories_pkey;
-  alter table public.categories add primary key (id, user_id);
-exception when others then
-  null;
-end $$;
+create policy "own transactions" on public.transactions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own categories" on public.categories for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own settings" on public.settings for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "sheet insert" on public.sheet_inbox for insert to anon with check (true);
+create policy "sheet read" on public.sheet_inbox for select to authenticated using (true);
+create policy "sheet clear" on public.sheet_inbox for delete to authenticated using (true);
 `;
-
-/* ---------------- config ---------------- */
 
 export function loadCloudConfig(): CloudConfig | null {
   try {
     const raw = localStorage.getItem(CFG_KEY);
-    if (raw) {
-      const c = JSON.parse(raw) as CloudConfig;
-      if (c && c.url && c.anonKey) return c;
-    }
-  } catch {
-    /* ignore */
-  }
-  // Fallback: build-time env vars (handy on Vercel/Netlify — set them in the dashboard).
-  // The anon key is designed to be public, so this is safe.
-  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
-  const url = env?.VITE_SUPABASE_URL;
-  const anonKey = env?.VITE_SUPABASE_ANON_KEY;
-  if (url && anonKey) return { url, anonKey };
+    if (!raw) return null;
+    const c = JSON.parse(raw) as CloudConfig;
+    if (c && c.url && c.anonKey) return c;
+  } catch { /* ignore */ }
   return null;
 }
 
@@ -122,9 +83,7 @@ export function saveCloudConfig(c: CloudConfig | null): void {
   try {
     if (c) localStorage.setItem(CFG_KEY, JSON.stringify(c));
     else localStorage.removeItem(CFG_KEY);
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
 }
 
 export function makeClient(cfg: CloudConfig): SupabaseClient {
@@ -132,8 +91,6 @@ export function makeClient(cfg: CloudConfig): SupabaseClient {
     auth: { persistSession: true, autoRefreshToken: true },
   });
 }
-
-/* ---------------- tombstones (deletes that must reach the cloud) ---------------- */
 
 interface Tombstone {
   table: "transactions" | "categories";
@@ -146,9 +103,7 @@ export function addTombstone(t: Tombstone): void {
     const list = loadTombstones();
     list.push(t);
     localStorage.setItem(TOMB_KEY, JSON.stringify(list));
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
 }
 
 function loadTombstones(): Tombstone[] {
@@ -163,13 +118,9 @@ function takeTombstones(): Tombstone[] {
   const list = loadTombstones();
   try {
     localStorage.removeItem(TOMB_KEY);
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
   return list;
 }
-
-/* ---------------- row mapping ---------------- */
 
 interface TxRow {
   id: string;
@@ -241,6 +192,8 @@ const rowToCat = (r: CatRow): Category => ({
   updatedAt: Number(r.updated_at ?? 0),
 });
 
+const FALLBACK_COLORS = ["#2f7e58", "#c2703e", "#4f7ac2", "#b64f6e", "#7a6bc9", "#3d8f8a", "#a3802c", "#8a5a3b", "#5b7f3b", "#c05a4e"];
+
 function parseSheetConfig(raw: string | null | undefined): SheetConfig | null {
   if (!raw) return null;
   try {
@@ -252,28 +205,22 @@ function parseSheetConfig(raw: string | null | undefined): SheetConfig | null {
         enabled: !!p.enabled,
       };
     }
-  } catch {
-    /* ignore malformed config */
-  }
+  } catch { /* ignore */ }
   return null;
 }
-
-/* ---------------- the sync engine ---------------- */
 
 export interface SyncInput {
   transactions: Transaction[];
   categories: Category[];
   currency: string;
   settingsUpdatedAt: number;
-  /** live Google Sheet sync config (persisted in the cloud settings row) */
   sheet?: SheetConfig | null;
 }
 
 export interface SyncResult extends SyncInput {
   ingestedFromSheet: number;
-  /** rows pulled from the configured live Google Sheet during this sync */
   pulledFromSheet: number;
-  sheetError?: string | null;
+  sheetError: string | null;
 }
 
 export interface DirtyFlags {
@@ -282,18 +229,12 @@ export interface DirtyFlags {
   settings: boolean;
 }
 
-const FALLBACK_COLORS = [
-  "#2f7e58", "#c2703e", "#4f7ac2", "#b64f6e", "#7a6bc9",
-  "#3d8f8a", "#a3802c", "#8a5a3b", "#5b7f3b", "#c05a4e",
-];
-
 export async function syncAll(
   client: SupabaseClient,
   userId: string,
   local: SyncInput,
   dirty: DirtyFlags
 ): Promise<SyncResult> {
-  /* 1 — pull everything that belongs to this user */
   const [txRes, catRes, setRes, inboxRes] = await Promise.all([
     client.from("transactions").select("*").eq("user_id", userId),
     client.from("categories").select("*").eq("user_id", userId),
@@ -316,7 +257,6 @@ export async function syncAll(
     updated_at: number;
   } | null;
 
-  /* 2 — deletions recorded locally while (maybe) offline */
   const tombs = takeTombstones();
   const tombTx = new Map(tombs.filter((t) => t.table === "transactions").map((t) => [t.id, t.at]));
   const tombCat = new Map(tombs.filter((t) => t.table === "categories").map((t) => [t.id, t.at]));
@@ -337,13 +277,6 @@ export async function syncAll(
     }
   });
 
-  /* 3 — cloud-first merge:
-        Supabase is the source of truth. The local copy contributes ONLY
-        (a) transactions/categories the user actually changed on this device
-            since the last successful sync (the dirty sets), and
-        (b) default categories when the cloud ledger is brand-new/empty, so a
-            fresh device still has a usable category list.
-        Everything else local (e.g. leftover demo data) is replaced by cloud. */
   const pushTx: Transaction[] = [];
   const mergedTx = new Map<string, Transaction>(cloudTx);
   for (const t of local.transactions) {
@@ -365,24 +298,22 @@ export async function syncAll(
     }
   }
 
-  /* 4 — Google Sheet inbox → turn rows into real transactions */
   let ingested = 0;
   const inboxRows = inboxRes.error
     ? []
     : ((inboxRes.data ?? []) as {
-      id: number;
-      date: string | null;
-      kind: string | null;
-      category: string | null;
-      note: string | null;
-      amount: number | null;
-      payment: string | null;
-      source_ref: string | null;
-    }[]);
+        id: number;
+        date: string | null;
+        kind: string | null;
+        category: string | null;
+        note: string | null;
+        amount: number | null;
+        payment: string | null;
+        source_ref: string | null;
+      }[]);
 
   if (inboxRows.length > 0) {
     const now = Date.now();
-    // Build a map of existing transactions by source_ref for dedup/updates
     const existingBySource = new Map<string, Transaction>();
     for (const t of mergedTx.values()) {
       if (t.sourceRef) {
@@ -390,7 +321,6 @@ export async function syncAll(
       }
     }
 
-    // Group inbox rows by source_ref - we need to track ALL rows to delete them all
     const inboxBySource = new Map<string, typeof inboxRows>();
     for (const r of inboxRows) {
       const key = r.source_ref ?? `no_source_${r.id}`;
@@ -402,18 +332,16 @@ export async function syncAll(
 
     const allInboxIds: number[] = [];
     for (const rows of inboxBySource.values()) {
-      // Sort by ID descending to get the latest entry (highest ID = most recent)
       rows.sort((a, b) => b.id - a.id);
       const latest = rows[0];
-
-      // Collect ALL inbox IDs for deletion (not just the one we process)
+      
       for (const row of rows) {
         allInboxIds.push(row.id);
       }
 
       const amount = Math.abs(Number(latest.amount));
       if (!latest.date || isNaN(amount) || amount <= 0) {
-        continue; // malformed → skip but still delete from inbox
+        continue;
       }
       const type = /inc|dep|credit/i.test(latest.kind ?? "") ? "income" : "expense";
       const name = (latest.category ?? "").trim() || "Uncategorized";
@@ -440,10 +368,8 @@ export async function syncAll(
         pushCat.push(cat);
       }
 
-      // Check if transaction with this source_ref already exists
       const existing = sourceRef ? existingBySource.get(sourceRef) : undefined;
       if (existing) {
-        // Update existing transaction
         existing.type = type;
         existing.amount = amount;
         existing.categoryId = cat.id;
@@ -453,7 +379,6 @@ export async function syncAll(
         existing.updatedAt = now + ingested;
         pushTx.push(existing);
       } else {
-        // Create new transaction
         const tx: Transaction = {
           id: uid(),
           type,
@@ -473,15 +398,12 @@ export async function syncAll(
       }
       ingested++;
     }
-
-    // Delete ALL inbox rows (including duplicates) after processing
+    
     if (allInboxIds.length > 0) {
       await client.from("sheet_inbox").delete().in("id", allInboxIds);
     }
   }
 
-  /* 4b — live Google Sheet pull: fetch the configured tab, parse it with the
-     same engine as manual import, and add/update rows using source_ref for dedup. */
   let pulled = 0;
   let sheetError: string | null = null;
   if (local.sheet?.enabled && local.sheet.spreadsheetId) {
@@ -489,7 +411,6 @@ export async function syncAll(
       const csv = await fetchSheetCSV(local.sheet.spreadsheetId, local.sheet.tabName || undefined);
       const parsed = buildParsed(csv, true, false, Array.from(mergedCat.values()));
       if (parsed) {
-        // Build a map of existing transactions by source_ref
         const existingBySource = new Map<string, Transaction>();
         for (const t of mergedTx.values()) {
           if (t.sourceRef) {
@@ -500,7 +421,6 @@ export async function syncAll(
         let i = 0;
         for (let rowIdx = 0; rowIdx < parsed.transactions.length && rowIdx < 2500; rowIdx++) {
           const pt = parsed.transactions[rowIdx];
-          // Generate source_ref from tab name and row number from the parsed transaction
           const rowNum = pt.rowNumber ?? (rowIdx + 2);
           const sourceRef = `sheet:${local.sheet.tabName || "default"}:row_${rowNum}`;
 
@@ -522,10 +442,8 @@ export async function syncAll(
             pushCat.push(cat);
           }
 
-          // Check if transaction with this source_ref already exists
           const existing = existingBySource.get(sourceRef);
           if (existing) {
-            // Update existing transaction
             existing.type = pt.type;
             existing.amount = pt.amount;
             existing.categoryId = cat.id;
@@ -535,7 +453,6 @@ export async function syncAll(
             existing.updatedAt = now + i;
             pushTx.push(existing);
           } else {
-            // Create new transaction
             const tx: Transaction = {
               id: uid(),
               type: pt.type,
@@ -560,7 +477,6 @@ export async function syncAll(
     }
   }
 
-  /* 5 — settings merge (currency + live-sheet config travel together) */
   let currency = local.currency;
   let sheetCfg: SheetConfig | null = local.sheet ?? null;
   let settingsUpdatedAt = local.settingsUpdatedAt;
@@ -574,16 +490,11 @@ export async function syncAll(
     pushSettings = false;
   }
 
-  /* 6 — push winners back up */
   const writes: PromiseLike<unknown>[] = [];
   if (pushTx.length)
-    writes.push(
-      client.from("transactions").upsert(pushTx.map((t) => txToRow(t, userId)))
-    );
+    writes.push(client.from("transactions").upsert(pushTx.map((t) => txToRow(t, userId))));
   if (pushCat.length)
-    writes.push(
-      client.from("categories").upsert(pushCat.map((c) => catToRow(c, userId)))
-    );
+    writes.push(client.from("categories").upsert(pushCat.map((c) => catToRow(c, userId))));
   if (pushSettings)
     writes.push(
       client.from("settings").upsert({
@@ -615,5 +526,3 @@ export async function syncAll(
     sheetError,
   };
 }
-
-/* Google Sheet CSV fetching lives in src/importer.ts (shared with manual import). */
