@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "../components/Icons";
 import { ImportModal } from "../components/ImportModal";
 import { ConfirmModal } from "../components/modals";
@@ -28,6 +29,37 @@ export function Transactions({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [toDelete, setToDelete] = useState<Transaction | null>(null);
+  const [monthSearch, setMonthSearch] = useState("");
+  const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
+  const monthDropdownRef = useRef<HTMLDivElement>(null);
+  const monthButtonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target as Node)) {
+        setMonthDropdownOpen(false);
+      }
+    };
+
+    if (monthDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [monthDropdownOpen]);
+
+  // Calculate dropdown position when opened
+  useEffect(() => {
+    if (monthDropdownOpen && monthButtonRef.current) {
+      const rect = monthButtonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  }, [monthDropdownOpen]);
 
   const monthOptions = useMemo(
     () =>
@@ -44,6 +76,16 @@ export function Transactions({
         .reverse(),
     [transactions]
   );
+
+  const filteredMonthOptions = useMemo(() => {
+    const searchLower = monthSearch.toLowerCase();
+    const filtered = monthOptions.filter((k) => {
+      const label = monthLabel(k).toLowerCase();
+      return label.includes(searchLower) || k.includes(searchLower);
+    });
+    // Show only first 5 if no search, otherwise show all matches
+    return monthSearch ? filtered : filtered.slice(0, 5);
+  }, [monthOptions, monthSearch]);
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -134,7 +176,7 @@ export function Transactions({
 
       {/* filters */}
       <Reveal>
-        <div className={`${CARD} p-4`}>
+        <div className={`${CARD} p-4 overflow-visible relative z-10`}>
           {/* Row 1: Search + Type toggle */}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex-1 min-w-[280px]">
@@ -166,14 +208,80 @@ export function Transactions({
                 </option>
               ))}
             </select>
-            <select className="flex-1 border border-line rounded-lg bg-card text-sm px-3 py-2 text-ink min-w-0" value={monthF} onChange={(e) => setMonthF(e.target.value)}>
-              <option value="all">All months</option>
-              {monthOptions.map((k) => (
-                <option key={k} value={k}>
-                  {monthLabel(k)}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1 relative min-w-0">
+              <button
+                ref={monthButtonRef}
+                type="button"
+                onClick={() => setMonthDropdownOpen(!monthDropdownOpen)}
+                className="w-full flex items-center justify-between border border-line rounded-lg bg-card text-sm px-3 py-2 text-ink hover:border-ink-faint transition-colors cursor-pointer"
+              >
+                <span className="truncate">
+                  {monthF === "all" ? "All months" : monthLabel(monthF)}
+                </span>
+                <Icon name="chevronDown" size={14} className="text-ink-faint flex-shrink-0" />
+              </button>
+              
+              {monthDropdownOpen && createPortal(
+                <div 
+                  ref={monthDropdownRef}
+                  className="fixed border border-line rounded-lg bg-card shadow-[0_8px_24px_rgba(0,0,0,0.15)] z-[9999] max-h-64 overflow-hidden flex flex-col"
+                  style={{
+                    top: `${dropdownPosition.top}px`,
+                    left: `${dropdownPosition.left}px`,
+                    width: `${dropdownPosition.width}px`,
+                  }}
+                >
+                  <div className="p-2 border-b border-line">
+                    <input
+                      type="text"
+                      placeholder="Search months..."
+                      value={monthSearch}
+                      onChange={(e) => setMonthSearch(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border border-line rounded bg-card focus:outline-none focus:border-moss"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="overflow-y-auto flex-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMonthF("all");
+                        setMonthDropdownOpen(false);
+                        setMonthSearch("");
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-line-soft transition-colors cursor-pointer ${
+                        monthF === "all" ? "bg-mint-dim text-moss-deep font-semibold" : "text-ink"
+                      }`}
+                    >
+                      All months
+                    </button>
+                    {filteredMonthOptions.length > 0 ? (
+                      filteredMonthOptions.map((k) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => {
+                            setMonthF(k);
+                            setMonthDropdownOpen(false);
+                            setMonthSearch("");
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-line-soft transition-colors cursor-pointer ${
+                            monthF === k ? "bg-mint-dim text-moss-deep font-semibold" : "text-ink"
+                          }`}
+                        >
+                          {monthLabel(k)}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-4 text-center text-sm text-ink-faint">
+                        No months found
+                      </div>
+                    )}
+                  </div>
+                </div>,
+                document.body
+              )}
+            </div>
             <select className="flex-1 border border-line rounded-lg bg-card text-sm px-3 py-2 text-ink min-w-0" value={yearF} onChange={(e) => setYearF(e.target.value)}>
               <option value="all">All years</option>
               {yearOptions.map((y) => (
