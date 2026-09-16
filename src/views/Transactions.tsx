@@ -108,13 +108,33 @@ export function Transactions({
   }, [transactions, categories, q, typeF, catF, monthF, yearF, dateFrom, dateTo]);
 
   const groups = useMemo(() => {
-    const m = new Map<string, Transaction[]>();
+    // Group by year first, then by date
+    const yearMap = new Map<string, Map<string, Transaction[]>>();
+
     for (const t of filtered) {
-      const arr = m.get(t.date);
-      if (arr) arr.push(t);
-      else m.set(t.date, [t]);
+      const year = t.date.slice(0, 4);
+      const date = t.date;
+
+      if (!yearMap.has(year)) {
+        yearMap.set(year, new Map());
+      }
+
+      const dateMap = yearMap.get(year)!;
+      if (!dateMap.has(date)) {
+        dateMap.set(date, []);
+      }
+      dateMap.get(date)!.push(t);
     }
-    return Array.from(m.entries());
+
+    // Convert to array structure: [{ year, dates: [{ date, transactions }] }]
+    return Array.from(yearMap.entries())
+      .sort(([a], [b]) => b.localeCompare(a)) // Sort years descending
+      .map(([year, dateMap]) => ({
+        year,
+        dates: Array.from(dateMap.entries())
+          .sort(([a], [b]) => b.localeCompare(a)) // Sort dates descending within year
+          .map(([date, transactions]) => ({ date, transactions }))
+      }));
   }, [filtered]);
 
   const totals = useMemo(
@@ -220,9 +240,9 @@ export function Transactions({
                 </span>
                 <Icon name="chevronDown" size={14} className="text-ink-faint flex-shrink-0" />
               </button>
-              
+
               {monthDropdownOpen && createPortal(
-                <div 
+                <div
                   ref={monthDropdownRef}
                   className="fixed border border-line rounded-lg bg-card shadow-[0_8px_24px_rgba(0,0,0,0.15)] z-[9999] max-h-64 overflow-hidden flex flex-col"
                   style={{
@@ -249,9 +269,8 @@ export function Transactions({
                         setMonthDropdownOpen(false);
                         setMonthSearch("");
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-line-soft transition-colors cursor-pointer ${
-                        monthF === "all" ? "bg-mint-dim text-moss-deep font-semibold" : "text-ink"
-                      }`}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-line-soft transition-colors cursor-pointer ${monthF === "all" ? "bg-mint-dim text-moss-deep font-semibold" : "text-ink"
+                        }`}
                     >
                       All months
                     </button>
@@ -265,9 +284,8 @@ export function Transactions({
                             setMonthDropdownOpen(false);
                             setMonthSearch("");
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-line-soft transition-colors cursor-pointer ${
-                            monthF === k ? "bg-mint-dim text-moss-deep font-semibold" : "text-ink"
-                          }`}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-line-soft transition-colors cursor-pointer ${monthF === k ? "bg-mint-dim text-moss-deep font-semibold" : "text-ink"
+                            }`}
                         >
                           {monthLabel(k)}
                         </button>
@@ -345,97 +363,113 @@ export function Transactions({
           />
         </div>
       ) : (
-        <div className="space-y-4">
-          {groups.map(([date, txs], gi) => {
-            const dayNet = txs.reduce(
-              (s, t) => s + (t.type === "income" ? t.amount : -t.amount),
-              0
-            );
+        <div className="space-y-6">
+          {groups.map((yearGroup, gi) => {
+            const { year, dates } = yearGroup;
             return (
-              <Reveal key={date} delay={Math.min(gi, 5) * 50}>
-                <section className={`${CARD} overflow-hidden`}>
-                  <header className="flex items-center justify-between border-b border-dashed border-line bg-paper/60 px-4 py-2.5">
-                    <span className="flex items-center gap-2 text-[13px] font-bold text-ink">
-                      <Icon name="calendar" size={14} className="text-ink-faint" />
-                      {dayLabel(date)}
-                    </span>
-                    <span
-                      className={`num text-[13px] font-bold ${
-                        dayNet >= 0 ? "text-moss-deep" : "text-coral-deep"
-                      }`}
-                    >
-                      {dayNet >= 0 ? "+" : "\u2212"}
-                      {fmtMoney(Math.abs(dayNet), currency)}
-                    </span>
-                  </header>
-                  <ul>
-                    {txs.map((t, i) => {
-                      const cat = catOf(t.categoryId);
-                      return (
-                        <li
-                          key={t.id}
-                          className={`group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-line-soft/60 ${
-                            i > 0 ? "dashed-rule" : ""
-                          }`}
-                        >
+              <div key={year} className="space-y-4">
+                {/* Year Header */}
+                <div className="sticky top-0 z-20 flex items-center gap-3 bg-paper py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-lg font-bold text-ink">{year}</span>
+                  </div>
+                  <div className="flex-1 h-px bg-line"></div>
+                  <span className="text-xs text-ink-faint">
+                    {dates.reduce((sum, d) => sum + d.transactions.length, 0)} transactions
+                  </span>
+                </div>
+
+                {/* Date Groups within Year */}
+                {dates.map(({ date, transactions: txs }, di) => {
+                  const dayNet = txs.reduce(
+                    (s, t) => s + (t.type === "income" ? t.amount : -t.amount),
+                    0
+                  );
+                  return (
+                    <Reveal key={date} delay={Math.min(di, 5) * 50}>
+                      <section className={`${CARD} overflow-hidden`}>
+                        <header className="flex items-center justify-between border-b border-dashed border-line bg-paper/60 px-4 py-2.5">
+                          <span className="flex items-center gap-2 text-[13px] font-bold text-ink">
+                            <Icon name="calendar" size={14} className="text-ink-faint" />
+                            {dayLabel(date)}
+                          </span>
                           <span
-                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-paper transition-transform duration-150 group-hover:scale-105"
-                            style={{ background: cat?.color ?? "var(--color-ink-faint)" }}
+                            className={`num text-[13px] font-bold ${dayNet >= 0 ? "text-moss-deep" : "text-coral-deep"
+                              }`}
                           >
-                            <Icon name={(cat?.icon as never) ?? "receipt"} size={17} />
+                            {dayNet >= 0 ? "+" : "\u2212"}
+                            {fmtMoney(Math.abs(dayNet), currency)}
                           </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[15px] font-semibold text-ink">
-                              {t.note || cat?.name || "Untitled"}
-                            </p>
-                            <p className="flex items-center gap-1.5 text-[12px] text-ink-faint">
-                              <span
-                                className="inline-block h-2 w-2 rounded-full"
-                                style={{ background: cat?.color }}
-                              />
-                              {cat?.name ?? "Uncategorized"}
-                              <span aria-hidden>·</span>
-                              {t.type === "income" ? "Money in" : "Money out"}
-                              {t.payment && (
-                                <>
-                                  <span aria-hidden>·</span>
-                                  <span className="inline-flex items-center gap-1 font-medium text-ink-soft">
-                                    <Icon name={t.payment === "card" ? "wallet" : "coins"} size={12} />
-                                    {t.payment === "card" ? "Card" : "Cash"}
-                                  </span>
-                                </>
-                              )}
-                            </p>
-                          </div>
-                          <span
-                            className={`num text-[15px] font-bold ${
-                              t.type === "income" ? "text-moss-deep" : "text-ink"
-                            }`}
-                          >
-                            {fmtSigned(t, currency)}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-1 lg:opacity-0 lg:transition-opacity lg:group-hover:opacity-100">
-                            <button
-                              onClick={() => onEdit(t)}
-                              aria-label="Edit"
-                              className="grid h-8 w-8 place-items-center rounded-md text-ink-faint transition-colors hover:bg-mint-dim hover:text-moss-deep cursor-pointer"
-                            >
-                              <Icon name="pencil" size={15} />
-                            </button>
-                            <button
-                              onClick={() => setToDelete(t)}
-                              aria-label="Delete"
-                              className="grid h-8 w-8 place-items-center rounded-md text-ink-faint transition-colors hover:bg-coral-soft hover:text-coral-deep cursor-pointer"
-                            >
-                              <Icon name="trash" size={15} />
-                            </button>
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              </Reveal>
+                        </header>
+                        <ul>
+                          {txs.map((t, i) => {
+                            const cat = catOf(t.categoryId);
+                            return (
+                              <li
+                                key={t.id}
+                                className={`group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-line-soft/60 ${i > 0 ? "dashed-rule" : ""
+                                  }`}
+                              >
+                                <span
+                                  className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-paper transition-transform duration-150 group-hover:scale-105"
+                                  style={{ background: cat?.color ?? "var(--color-ink-faint)" }}
+                                >
+                                  <Icon name={(cat?.icon as never) ?? "receipt"} size={17} />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[15px] font-semibold text-ink">
+                                    {t.note || cat?.name || "Untitled"}
+                                  </p>
+                                  <p className="flex items-center gap-1.5 text-[12px] text-ink-faint">
+                                    <span
+                                      className="inline-block h-2 w-2 rounded-full"
+                                      style={{ background: cat?.color }}
+                                    />
+                                    {cat?.name ?? "Uncategorized"}
+                                    <span aria-hidden>·</span>
+                                    {t.type === "income" ? "Money in" : "Money out"}
+                                    {t.payment && (
+                                      <>
+                                        <span aria-hidden>·</span>
+                                        <span className="inline-flex items-center gap-1 font-medium text-ink-soft">
+                                          <Icon name={t.payment === "card" ? "wallet" : "coins"} size={12} />
+                                          {t.payment === "card" ? "Card" : "Cash"}
+                                        </span>
+                                      </>
+                                    )}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`num text-[15px] font-bold ${t.type === "income" ? "text-moss-deep" : "text-ink"
+                                    }`}
+                                >
+                                  {fmtSigned(t, currency)}
+                                </span>
+                                <span className="flex shrink-0 items-center gap-1 lg:opacity-0 lg:transition-opacity lg:group-hover:opacity-100">
+                                  <button
+                                    onClick={() => onEdit(t)}
+                                    aria-label="Edit"
+                                    className="grid h-8 w-8 place-items-center rounded-md text-ink-faint transition-colors hover:bg-mint-dim hover:text-moss-deep cursor-pointer"
+                                  >
+                                    <Icon name="pencil" size={15} />
+                                  </button>
+                                  <button
+                                    onClick={() => setToDelete(t)}
+                                    aria-label="Delete"
+                                    className="grid h-8 w-8 place-items-center rounded-md text-ink-faint transition-colors hover:bg-coral-soft hover:text-coral-deep cursor-pointer"
+                                  >
+                                    <Icon name="trash" size={15} />
+                                  </button>
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </section>
+                    </Reveal>
+                  );
+                })}
+              </div>
             );
           })}
 
@@ -455,9 +489,8 @@ export function Transactions({
                 <span className="text-sm text-ink-soft">
                   Net{" "}
                   <b
-                    className={`num ${
-                      totals.income - totals.expense >= 0 ? "text-moss-deep" : "text-coral-deep"
-                    }`}
+                    className={`num ${totals.income - totals.expense >= 0 ? "text-moss-deep" : "text-coral-deep"
+                      }`}
                   >
                     {totals.income - totals.expense >= 0 ? "+" : "\u2212"}
                     {fmtMoney(Math.abs(totals.income - totals.expense), currency)}
